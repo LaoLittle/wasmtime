@@ -720,27 +720,27 @@
 ;; `i64` and smaller
 
 ;; Base case, simply subtracting things in registers.
-(rule isub_base_case -4 (lower (has_type (fits_in_64 ty) (isub x y)))
+(rule isub_base_case -4 (lower (has_type (fits_in_64 (ty_int ty)) (isub x y)))
       (sub ty x y))
 
 ;; Special case for when one operand is an immediate that fits in 12 bits.
-(rule isub_imm12 0 (lower (has_type (fits_in_64 ty) (isub x (imm12_from_value y))))
+(rule isub_imm12 0 (lower (has_type (fits_in_64 (ty_int ty)) (isub x (imm12_from_value y))))
       (sub_imm ty x y))
 
 ;; Same as the previous special case, except we can switch the subtraction to an
 ;; addition if the negated immediate fits in 12 bits.
-(rule isub_imm12_neg 2 (lower (has_type (fits_in_64 ty) (isub x y)))
+(rule isub_imm12_neg 2 (lower (has_type (fits_in_64 (ty_int ty)) (isub x y)))
       (if-let imm12_neg (imm12_from_negated_value y))
       (add_imm ty x imm12_neg))
 
 ;; Special cases for when we're subtracting an extended register where the
 ;; extending operation can get folded into the sub itself.
-(rule isub_extend 1 (lower (has_type (fits_in_64 ty) (isub x (extended_value_from_value y))))
+(rule isub_extend 1 (lower (has_type (fits_in_64 (ty_int ty)) (isub x (extended_value_from_value y))))
       (sub_extend ty x y))
 
 ;; Finally a special case for when we're subtracting the shift of a different
 ;; register by a constant amount and the shift can get folded into the sub.
-(rule isub_ishl -3 (lower (has_type (fits_in_64 ty)
+(rule isub_ishl -3 (lower (has_type (fits_in_64 (ty_int ty))
                        (isub x (ishl y (iconst k)))))
       (if-let amt (lshl_from_imm64 ty k))
       (sub_shift ty x y amt))
@@ -790,7 +790,7 @@
 ;;;; Rules for `imul` ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; `i64` and smaller.
-(rule imul_base_case -3 (lower (has_type (fits_in_64 ty) (imul x y)))
+(rule imul_base_case -3 (lower (has_type (fits_in_64 (ty_int ty)) (imul x y)))
       (madd ty x y (zero_reg)))
 
 ;; `i128`.
@@ -841,8 +841,8 @@
           (madd $I64 x y (zero_reg))
           (smulh $I64 x y))))
 
-;; Case for i8x16, i16x8, and i32x4.
-(rule -2 (lower (has_type (ty_vec128 ty @ (not_i64x2)) (imul x y)))
+;; vectors (i8x8/i8x16/i16x4/i16x8/i32x2/i32x4)
+(rule -2 (lower (has_type (lane_fits_in_32 ty @ (multi_lane _ _)) (imul x y)))
       (mul x y (vector_size ty)))
 
 ;; Special lowering for i64x2.
